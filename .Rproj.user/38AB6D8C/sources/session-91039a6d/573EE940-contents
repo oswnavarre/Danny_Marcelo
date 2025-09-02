@@ -1,0 +1,350 @@
+library(tidyverse)
+library(agricolae)
+library(readxl)
+library(writexl)
+library(jtools)
+library(extrafont)
+loadfonts(device = "win")
+
+
+# Germinación -------------------------------------------------------------
+
+datos <- read_excel("datos/Base.xlsx", sheet = "Germinación")
+
+
+datos <- datos |>
+  select(-c(Sustrato, Siembra, Toma)) |>
+  mutate(
+    Tasa = Tasa*100,
+    Variedad = factor(Variedad)
+  ) |>
+  filter( DDS != 1)
+
+stats_tasa <- datos |>
+  group_by(DDS, Tratamiento, Variedad) |>
+  summarise(
+    N = n(),
+    Tasa = case_when(N == 2 ~ round(100*sum(Germinadas)/60,2),
+                     TRUE ~ round(100*sum(Germinadas)/120,2)
+    )
+  )
+
+g1 <- ggplot(stats_tasa, aes(x = DDS, y = Tasa, col = Variedad)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1,15,2)) +
+  facet_wrap(. ~ Tratamiento, nrow = 3) +
+  labs(x = "Día después de siembra",
+       y = "Tasa de germinación (%)") + 
+  theme_apa() +
+  theme(
+    legend.position = "bottom",
+    text = element_text(family = "Arial"),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    plot.caption = element_text(size = 10)
+  )
+
+ggsave("graficos/germinacion.png",g1, width = 9, height = 10)
+
+
+# Crecimiento -------------------------------------------------------------
+
+creci <- read_excel("datos/Base.xlsx", sheet = "Crecimiento")
+labs <- read_excel("datos/Base.xlsx", sheet = "labs_creci")
+
+creci <- creci |>
+  filter(DDS == 8)
+
+creci_long <- creci |>
+  pivot_longer(
+    7:9,
+    names_to = "Variable",
+    values_to = "Valor"
+  )
+
+stats_creci <- creci_long |>
+  group_by(Tratamiento, Variedad, Variable)  |>
+  summarise(
+    Media = mean(Valor),
+    Desv = sd(Valor)
+  )
+
+variables <- unique(creci_long$Variable)
+variedades <- unique(creci_long$Variedad)
+
+for(i in seq_along(variables)){
+  
+}
+
+# Altura y hojas -------------------------------------------------------------------
+
+
+datos <- read_excel("datos/Base.xlsx", sheet = "CF")
+labels <- read_excel("datos/Base.xlsx", sheet = "labs")
+datos2 <- read_excel("datos/Base.xlsx", sheet = "Vivero")
+datos2$Altura <- as.numeric(datos2$Altura)
+datos3 <- bind_rows(datos, datos2)
+
+
+datos_largos <- datos3 |>
+  pivot_longer(
+    8:9,
+    names_to = "Variable",
+    values_to = "Valor"
+  ) |>
+  mutate(
+    Sustrato = paste0("S",Sustrato),
+    Ambiente = case_when(Tratamiento == "CF1" | Tratamiento == "CF2" ~ "CF",
+                         TRUE ~ "TA") 
+  ) |>
+  select(-c(Tratamiento, Siembra, Toma)) |>
+  drop_na()
+
+stats_vars <- datos_largos |>
+  group_by(DDS, Ambiente, Sustrato, Variedad, Variable) |>
+  summarise(
+    Media = mean(Valor),
+    Desv = sd(Valor)
+  )
+
+stats_vars_var <- datos_largos |>
+  group_by(DDS, Ambiente, Variedad, Variable) |>
+  summarise(
+    Media = mean(Valor),
+    Desv = sd(Valor)
+  )
+
+stats_vars_sus <- datos_largos |>
+  group_by(DDS, Ambiente, Sustrato, Variable) |>
+  summarise(
+    Media = mean(Valor),
+    Desv = sd(Valor)
+  )
+
+variables <- unique(datos_largos$Variable)
+ambientes <- unique(datos_largos$Ambiente)
+
+for(j in seq_along(ambientes)){
+  for(i in seq_along(variables)){
+    df <- stats_vars |>
+      filter(Variable == variables[i] & Ambiente == ambientes[j])
+    etiqueta <- paste0(labels[i,2])
+    g2 <- ggplot(df, aes(x = DDS, y = Media, col = Variedad)) +
+      geom_point() +
+      geom_line() +
+      scale_x_continuous(breaks = unique(df$DDS)) +
+      facet_wrap(. ~ Sustrato, nrow = 2) +
+      labs(x = "Día después de siembra",
+           y = etiqueta) + 
+      theme_apa() +
+      theme(
+        legend.position = "bottom",
+        text = element_text(family = "Arial"),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        plot.caption = element_text(size = 10)
+      )
+    nombre <- paste0("graficos/",variables[i],"_",ambientes[j],".png")
+    ggsave(nombre,g2,width = 8, height = 8)
+  }
+}
+
+
+valoresp_aov_var <- data.frame(
+  Ambiente = NA,
+  Variable = NA,
+  DDS = NA,
+  valorp = NA
+)
+
+valoresp_aov_sus <- data.frame(
+  Ambiente = NA,
+  Variable = NA,
+  DDS = NA,
+  valorp = NA
+)
+
+valoresp_aov_var_sus <- data.frame(
+  Ambiente = NA,
+  Variable = NA,
+  DDS = NA,
+  valorp = NA
+)
+
+grupos_var <- data.frame(
+  Ambiente = NA,
+  Variedad = NA,
+  Variable = NA,
+  DDS = NA,
+  Grupos =NA
+)
+
+grupos_sus <- data.frame(
+  Ambiente = NA,
+  Sustrato = NA,
+  Variable = NA,
+  DDS = NA,
+  Grupos = NA
+)
+
+
+
+for(j in seq_along(ambientes)){
+  datos_grafico <- datos_largos |>
+    filter( Ambiente == ambientes[j] )
+  ddss <- unique(datos_grafico$DDS)
+  for(i in seq_along(variables)){
+    for(k in seq_along(ddss)){
+      datos_grafico2 <- datos_grafico |>
+        filter(Variable == variables[i] & DDS == ddss[k] )
+      
+      variable_lab = labels[i,2]
+      etiqueta_grafico = paste(variable_lab)
+      
+      nombre_grafico = paste0("graficos/",ddss[k],"_",variables[i],"_",ambientes[j],".png")
+      
+      gvar <-ggplot(datos_grafico2, aes(x = Sustrato, y = Valor,  fill = Variedad)) +
+        geom_boxplot() + 
+        theme_apa() +
+        ylab(etiqueta_grafico) +
+        theme(
+          legend.position = "bottom",
+          axis.text.y = element_text(color = "black", family = "Arial",size=12),
+          axis.text.x = element_text(color = "black", family = "Arial",size=12),
+          axis.title.y = element_text(color = "black", family = "Arial",size=12),
+          legend.text = element_text(color = "black", family = "Arial",size=12),
+          axis.line.x = element_line(color = "black"),
+          axis.line.y = element_line(color = "black"),
+          axis.line.x.top = element_line(color = "black"),
+          axis.line.y.right = element_line(color = "black")
+        ) 
+      ggsave(nombre_grafico,gvar, width = 5, height = 5 )
+      
+      aov_var <- aov(Valor ~ Sustrato + Variedad + Sustrato:Variedad, 
+                     data = datos_grafico2)
+      tbl_aov_var <- anova(aov_var)
+      valsp_aov_var <- data.frame(
+        Ambiente = ambientes[j],
+        Variable = variables[i],
+        DDS = ddss[k],
+        valorp = tbl_aov_var[2,5]
+      )
+      
+      valsp_aov_sus <- data.frame(
+        Ambiente = ambientes[j],
+        Variable = variables[i],
+        DDS = ddss[k],
+        valorp = tbl_aov_var[1,5]
+      )
+      
+      valsp_aov_var_sus <- data.frame(
+        Ambiente = ambientes[j],
+        Variable = variables[i],
+        DDS = ddss[k],
+        valorp = tbl_aov_var[3,5]
+      )
+      
+      valoresp_aov_var <- bind_rows(valoresp_aov_var, valsp_aov_var)
+      valoresp_aov_sus <- bind_rows(valoresp_aov_sus, valsp_aov_sus)
+      valoresp_aov_var_sus <- bind_rows(valoresp_aov_var_sus, valsp_aov_var_sus)
+      
+      tukey_var <- HSD.test(aov_var, "Variedad")
+      tukey_sus <- HSD.test(aov_var, "Sustrato")
+      
+      grps_var <- tukey_var$groups
+      grps_var <- grps_var |>
+        rownames_to_column(var = "Variedad") |>
+        select(-2) |>
+        mutate(Variable = variables[i],
+               Ambiente = ambientes[j],
+               DDS = ddss[k]) |>
+        rename(
+          Grupos = groups
+        )
+      
+      grps_sus <- tukey_sus$groups
+      grps_sus <- grps_sus |>
+        rownames_to_column(var = "Sustrato") |>
+        select(-2) |>
+        mutate(Variable = variables[i],
+               Ambiente = ambientes[j],
+               DDS = ddss[k]) |>
+        rename(
+          Grupos = groups
+        )
+      
+      grupos_var <- bind_rows(grupos_var,grps_var)
+      grupos_sus <- bind_rows(grupos_sus,grps_sus)
+      
+      var2 <- datos_grafico2 |>
+        group_by(Variedad, Sustrato) |>
+        summarise(grupos = mean(Valor))
+      nombre_grafico_interaccion <- paste0("graficos/interaccion_",ddss[k],"_",variables[i],"_",ambientes[j],".png")
+      
+      grafico_int <- ggplot(var2, aes(x = Variedad, y = grupos, color = Sustrato) ) + 
+        geom_line(aes(group = Sustrato)) +
+        geom_point() +
+        ylab(etiqueta_grafico) +
+        xlab("Variedad") + theme_apa() +
+        theme(
+          legend.position = "bottom",
+          axis.text.y = element_text(color = "black", family = "Arial",size=12),
+          axis.text.x = element_text(color = "black", family = "Arial",size=12),
+          axis.title.y = element_text(color = "black", family = "Arial",size=12),
+          legend.text = element_text(color = "black", family = "Arial",size=12),
+          axis.line.x = element_line(color = "black"),
+          axis.line.y = element_line(color = "black"),
+          axis.line.x.top = element_line(color = "black"),
+          axis.line.y.right = element_line(color = "black")
+        )
+      
+      ggsave(nombre_grafico_interaccion,grafico_int,width = 4, height = 4)
+      
+    }
+  }
+}
+
+
+stats_vars_var <- left_join(stats_vars_var, grupos_var)
+
+grupos_sus <- grupos_sus |>
+  drop_na()
+
+stats_vars_sus <- left_join( grupos_sus, stats_vars_sus)
+
+
+stats_vars_sus2 <- stats_vars_sus |>
+  mutate(
+    Valor = paste0(round(Media,2),"\U00B1",round(Desv,2)," ",Grupos)
+  ) |>
+  select(-c(5:7))  |>
+  pivot_wider(
+    names_from = "Sustrato",
+    values_from = "Valor"
+  )
+  
+stats_vars_var2 <- stats_vars_var |>
+  mutate(
+    Valor = paste0(round(Media,2),"\U00B1",round(Desv,2)," ",Grupos)
+  ) |>
+  select(-c(5:7)) |>
+  pivot_wider(
+    names_from = "Variedad",
+    values_from = "Valor"
+  )
+
+
+write_xlsx(x = list("Sustrato" = stats_vars_sus2, 
+                    "Variedad" = stats_vars_var2,
+                    "Sus_Var" = stats_vars,
+                    "valsp_var" = valoresp_aov_var,
+                    "valsp_sus" = valoresp_aov_sus,
+                    "valsp_var_sus" = valoresp_aov_var_sus),
+           "resultados/estadisticas_factorial2.xlsx")
