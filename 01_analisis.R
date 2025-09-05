@@ -116,108 +116,108 @@ grupos_dosis <- data.frame(
 )
 mediciones <- unique(datos$Medición)
 for(j in seq_along(mediciones)){
-for(i in seq_along(variables)){
-  
-  datos_grafico <- datos_largos |>
-    filter(Variable == variables[i] & Medición == mediciones[j])
-  variable_lab = dicc_vars[i,2]
-  etiqueta_grafico = paste(variable_lab)
-  
-  nombre_grafico = paste0("graficos/",mediciones[j],"_",variables[i],".png")
-  
-  gvar <- ggplot(datos_grafico, aes(x = Dosis, y = Valor,  fill = Vigor)) +
-    geom_boxplot() + 
-    theme_apa() +
-    ylab(etiqueta_grafico) +
-    theme(
-      legend.position = "bottom",
-      axis.text.y = element_text(color = "black", family = "Arial",size=12),
-      axis.text.x = element_text(color = "black", family = "Arial",size=12),
-      axis.title.y = element_text(color = "black", family = "Arial",size=12),
-      legend.text = element_text(color = "black", family = "Arial",size=12),
-      axis.line.x = element_line(color = "black"),
-      axis.line.y = element_line(color = "black"),
-      axis.line.x.top = element_line(color = "black"),
-      axis.line.y.right = element_line(color = "black")
-    ) 
-  ggsave(nombre_grafico,gvar, width = 4, height = 4 )
-  
-  aov_var <- aov(Valor ~ Vigor + Dosis + Vigor:Dosis, 
-                 data = datos_grafico)
-  tbl_aov_var <- anova(aov_var)
-  valsp_aov_vigor <- data.frame(
-    Medición = mediciones[j],
-    Variable = variables[i],
-    valorp =  tbl_aov_var[1,5]
-    )
-  valsp_aov_dosis <- data.frame(
-    Medición = mediciones[j],
-    Variable = variables[i],
-    valorp =  tbl_aov_var[2,5]
-  )
-  valsp_aov_vigor_dosis <- data.frame(
-    Medición = mediciones[j],
-    Variable = variables[i],
-    valorp =  tbl_aov_var[3,5]
-  )
-  
-  valoresp_aov_dosis <- bind_rows(valoresp_aov_dosis, valsp_aov_dosis)
-  valoresp_aov_vigor <- bind_rows(valoresp_aov_vigor, valsp_aov_vigor)
-  valoresp_aov_vigor_dosis <- bind_rows(valoresp_aov_vigor_dosis, valsp_aov_vigor_dosis)
-  
-  tukey_vigor <- HSD.test(aov_var, "Vigor")
-  tukey_dosis <- HSD.test(aov_var, "Dosis")
-  
-  grps_vigor <- tukey_vigor$groups
-  grps_vigor <- grps_vigor |>
-    rownames_to_column(var = "Vigor") |>
-    select(-2) |>
-    mutate(
+  for(i in seq_along(variables)){
+    
+    datos_grafico <- datos_largos |>
+      filter(Variable == variables[i] & Medición == mediciones[j])
+    variable_lab = dicc_vars[i,2]
+    etiqueta_grafico = paste(variable_lab)
+    
+    nombre_grafico = paste0("graficos/",mediciones[j],"_",variables[i],".png")
+    
+    gvar <- ggplot(datos_grafico, aes(x = Dosis, y = Valor,  fill = Vigor)) +
+      geom_boxplot() + 
+      theme_apa() +
+      ylab(etiqueta_grafico) +
+      theme(
+        legend.position = "bottom",
+        axis.text.y = element_text(color = "black", family = "Arial",size=12),
+        axis.text.x = element_text(color = "black", family = "Arial",size=12),
+        axis.title.y = element_text(color = "black", family = "Arial",size=12),
+        legend.text = element_text(color = "black", family = "Arial",size=12),
+        axis.line.x = element_line(color = "black"),
+        axis.line.y = element_line(color = "black"),
+        axis.line.x.top = element_line(color = "black"),
+        axis.line.y.right = element_line(color = "black")
+      ) 
+    ggsave(nombre_grafico,gvar, width = 4, height = 4 )
+    
+    aov_var <- aov(Valor ~ Vigor + Dosis + Vigor:Dosis, 
+                   data = datos_grafico)
+    tbl_aov_var <- anova(aov_var)
+    valsp_aov_vigor <- data.frame(
       Medición = mediciones[j],
-      Variable = variables[i]) |>
-    rename(
-      Grupos = groups
+      Variable = variables[i],
+      valorp =  tbl_aov_var[1,5]
     )
-  
-  grps_dosis <- tukey_dosis$groups
-  grps_dosis <- grps_dosis |>
-    rownames_to_column(var = "Dosis") |>
-    select(-2) |>
-    mutate(
+    valsp_aov_dosis <- data.frame(
       Medición = mediciones[j],
-      Variable = variables[i]) |>
-    rename(
-      Grupos = groups
+      Variable = variables[i],
+      valorp =  tbl_aov_var[2,5]
     )
-  
-  grupos_vigor <- rbind(grupos_vigor,grps_vigor)
-  grupos_dosis <- rbind(grupos_dosis,grps_dosis)
-  
-  var2 <- datos_grafico |>
-    group_by(Vigor, Dosis) |>
-    summarise(grupos = mean(Valor))
-  nombre_grafico_interaccion <- paste0("graficos/interaccion_",mediciones[j],"_",variables[i],".bmp")
-  
-  grafico_int <- ggplot(var2, aes(x = Dosis, y = grupos, color = Vigor) ) + 
-    geom_line(aes(group = Vigor)) +
-    geom_point() +
-    ylab(etiqueta_grafico) +
-    xlab("Dosis") + theme_apa() +
-    theme(
-      legend.position = "bottom",
-      axis.text.y = element_text(color = "black", family = "Arial",size=12),
-      axis.text.x = element_text(color = "black", family = "Arial",size=12),
-      axis.title.y = element_text(color = "black", family = "Arial",size=12),
-      legend.text = element_text(color = "black", family = "Arial",size=12),
-      axis.line.x = element_line(color = "black"),
-      axis.line.y = element_line(color = "black"),
-      axis.line.x.top = element_line(color = "black"),
-      axis.line.y.right = element_line(color = "black")
+    valsp_aov_vigor_dosis <- data.frame(
+      Medición = mediciones[j],
+      Variable = variables[i],
+      valorp =  tbl_aov_var[3,5]
     )
-  
-  ggsave(nombre_grafico_interaccion,grafico_int,width = 4, height = 4)
-  
-}
+    
+    valoresp_aov_dosis <- bind_rows(valoresp_aov_dosis, valsp_aov_dosis)
+    valoresp_aov_vigor <- bind_rows(valoresp_aov_vigor, valsp_aov_vigor)
+    valoresp_aov_vigor_dosis <- bind_rows(valoresp_aov_vigor_dosis, valsp_aov_vigor_dosis)
+    
+    tukey_vigor <- HSD.test(aov_var, "Vigor")
+    tukey_dosis <- HSD.test(aov_var, "Dosis")
+    
+    grps_vigor <- tukey_vigor$groups
+    grps_vigor <- grps_vigor |>
+      rownames_to_column(var = "Vigor") |>
+      select(-2) |>
+      mutate(
+        Medición = mediciones[j],
+        Variable = variables[i]) |>
+      rename(
+        Grupos = groups
+      )
+    
+    grps_dosis <- tukey_dosis$groups
+    grps_dosis <- grps_dosis |>
+      rownames_to_column(var = "Dosis") |>
+      select(-2) |>
+      mutate(
+        Medición = mediciones[j],
+        Variable = variables[i]) |>
+      rename(
+        Grupos = groups
+      )
+    
+    grupos_vigor <- rbind(grupos_vigor,grps_vigor)
+    grupos_dosis <- rbind(grupos_dosis,grps_dosis)
+    
+    var2 <- datos_grafico |>
+      group_by(Vigor, Dosis) |>
+      summarise(grupos = mean(Valor))
+    nombre_grafico_interaccion <- paste0("graficos/interaccion_",mediciones[j],"_",variables[i],".bmp")
+    
+    grafico_int <- ggplot(var2, aes(x = Dosis, y = grupos, color = Vigor) ) + 
+      geom_line(aes(group = Vigor)) +
+      geom_point() +
+      ylab(etiqueta_grafico) +
+      xlab("Dosis") + theme_apa() +
+      theme(
+        legend.position = "bottom",
+        axis.text.y = element_text(color = "black", family = "Arial",size=12),
+        axis.text.x = element_text(color = "black", family = "Arial",size=12),
+        axis.title.y = element_text(color = "black", family = "Arial",size=12),
+        legend.text = element_text(color = "black", family = "Arial",size=12),
+        axis.line.x = element_line(color = "black"),
+        axis.line.y = element_line(color = "black"),
+        axis.line.x.top = element_line(color = "black"),
+        axis.line.y.right = element_line(color = "black")
+      )
+    
+    ggsave(nombre_grafico_interaccion,grafico_int,width = 4, height = 4)
+    
+  }
 }
 
 
