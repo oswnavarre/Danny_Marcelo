@@ -62,12 +62,13 @@ variables <- unique(datos_largos$Variable)
 for(i in seq_along(variables)){
   df <- stats_vars |>
     filter(Variable == variables[i])
+  etiqueta <- paste0(dicc_vars[i,2])
   g2 <- ggplot(df, aes(x = Medición, y = Media, col = Dosis)) +
     geom_point() +
     geom_line() +
     scale_x_continuous(breaks = unique(df$Medición)) +
     facet_wrap(. ~ Vigor, nrow = 1) +
-    labs(x = "Medición") + 
+    labs(x = "Medición", y = etiqueta) + 
     theme_apa() +
     theme(
       legend.position = "bottom",
@@ -225,7 +226,7 @@ for(j in seq_along(mediciones)){
 
 
 
-# Estadísticas por Madurez y Componente -------------------------------
+# Estadísticas por Vigor y Dosis -------------------------------
 
 
 stats_vars_dosis <- left_join(stats_vars_dosis, grupos_dosis)
