@@ -84,42 +84,48 @@ for(i in seq_along(variables)){
 }
 
 valoresp_aov_vigor <- data.frame(
-  Variable = variables,
-  valorp = 0
+  Variable = NA,
+  valorp = NA,
+  Medición = NA
 )
 
 valoresp_aov_dosis <- data.frame(
-  Variable = variables,
-  valorp = 0
+  Variable = NA,
+  valorp = NA,
+  Medición = NA
 )
 
 valoresp_aov_vigor_dosis <- data.frame(
-  Variable = variables,
-  valorp = 0
+  Variable = NA,
+  valorp = NA,
+  Medición = NA
 )
 
 grupos_vigor <- data.frame(
+  Medición = NA,
   Variable = NA,
   Vigor = NA,
   Grupos = NA
 )
 
 grupos_dosis <- data.frame(
+  Medición = NA,
   Variable = NA,
   Dosis = NA,
   Grupos = NA
 )
-
+mediciones <- unique(datos$Medición)
+for(j in seq_along(mediciones)){
 for(i in seq_along(variables)){
   
   datos_grafico <- datos_largos |>
-    filter(Variable == variables[i])
+    filter(Variable == variables[i] & Medición == mediciones[j])
   variable_lab = dicc_vars[i,2]
   etiqueta_grafico = paste(variable_lab)
   
-  nombre_grafico = paste0("graficos/",variables[i],".png")
+  nombre_grafico = paste0("graficos/",mediciones[j],"_",variables[i],".png")
   
-  gvar <-ggplot(datos_grafico, aes(x = Dosis, y = Valor,  fill = Vigor)) +
+  gvar <- ggplot(datos_grafico, aes(x = Dosis, y = Valor,  fill = Vigor)) +
     geom_boxplot() + 
     theme_apa() +
     ylab(etiqueta_grafico) +
@@ -139,9 +145,25 @@ for(i in seq_along(variables)){
   aov_var <- aov(Valor ~ Vigor + Dosis + Vigor:Dosis, 
                  data = datos_grafico)
   tbl_aov_var <- anova(aov_var)
-  valoresp_aov_vigor[i,2] <- tbl_aov_var[1,5]
-  valoresp_aov_dosis[i,2] <- tbl_aov_var[2,5]
-  valoresp_aov_vigor_dosis[i,2] <- tbl_aov_var[3,5]
+  valsp_aov_vigor <- data.frame(
+    Medición = mediciones[j],
+    Variable = variables[i],
+    valorp =  tbl_aov_var[1,5]
+    )
+  valsp_aov_dosis <- data.frame(
+    Medición = mediciones[j],
+    Variable = variables[i],
+    valorp =  tbl_aov_var[2,5]
+  )
+  valsp_aov_vigor_dosis <- data.frame(
+    Medición = mediciones[j],
+    Variable = variables[i],
+    valorp =  tbl_aov_var[3,5]
+  )
+  
+  valoresp_aov_dosis <- bind_rows(valoresp_aov_dosis, valsp_aov_dosis)
+  valoresp_aov_vigor <- bind_rows(valoresp_aov_vigor, valsp_aov_vigor)
+  valoresp_aov_vigor_dosis <- bind_rows(valoresp_aov_vigor_dosis, valsp_aov_vigor_dosis)
   
   tukey_vigor <- HSD.test(aov_var, "Vigor")
   tukey_dosis <- HSD.test(aov_var, "Dosis")
@@ -150,7 +172,9 @@ for(i in seq_along(variables)){
   grps_vigor <- grps_vigor |>
     rownames_to_column(var = "Vigor") |>
     select(-2) |>
-    mutate(Variable = variables[i]) |>
+    mutate(
+      Medición = mediciones[j],
+      Variable = variables[i]) |>
     rename(
       Grupos = groups
     )
@@ -159,7 +183,9 @@ for(i in seq_along(variables)){
   grps_dosis <- grps_dosis |>
     rownames_to_column(var = "Dosis") |>
     select(-2) |>
-    mutate(Variable = variables[i]) |>
+    mutate(
+      Medición = mediciones[j],
+      Variable = variables[i]) |>
     rename(
       Grupos = groups
     )
@@ -170,7 +196,7 @@ for(i in seq_along(variables)){
   var2 <- datos_grafico |>
     group_by(Vigor, Dosis) |>
     summarise(grupos = mean(Valor))
-  nombre_grafico_interaccion <- paste0("graficos/interaccion_",variables[i],".bmp")
+  nombre_grafico_interaccion <- paste0("graficos/interaccion_",mediciones[j],"_",variables[i],".bmp")
   
   grafico_int <- ggplot(var2, aes(x = Dosis, y = grupos, color = Vigor) ) + 
     geom_line(aes(group = Vigor)) +
@@ -192,7 +218,7 @@ for(i in seq_along(variables)){
   ggsave(nombre_grafico_interaccion,grafico_int,width = 4, height = 4)
   
 }
-
+}
 
 
 
@@ -201,52 +227,40 @@ for(i in seq_along(variables)){
 
 # Estadísticas por Madurez y Componente -------------------------------
 
-stats_vars_componente <- datos_largos |>
-  group_by(Componente,  Variable) |>
-  summarise(
-    Media = mean(Valor), 
-    Desv  = sd(Valor)
-  )
 
-stats_vars_componente <- left_join(stats_vars_componente, grupos_componente)
+stats_vars_dosis <- left_join(stats_vars_dosis, grupos_dosis)
 
-stats_vars_componente2 <- stats_vars_componente |>
+stats_vars_dosis2 <- stats_vars_dosis |>
   mutate(
     Valor = paste0(round(Media,2),"\U00B1",round(Desv,2)," ",Grupos)
   ) |>
-  select(-c(3:5)) |>
+  select(-c(4:6)) |>
   pivot_wider(
-    names_from = "Variable",
+    names_from = "Dosis",
     values_from = "Valor"
   )
 
 
-stats_vars_madurez <- datos_largos |>
-  group_by(Madurez,  Variable) |>
-  summarise(
-    Media = mean(Valor), 
-    Desv  = sd(Valor)
-  )
 
-stats_vars_madurez <- left_join(stats_vars_madurez, grupos_madurez)
+stats_vars_vigor <- left_join(stats_vars_vigor, grupos_vigor)
 
-stats_vars_madurez2 <- stats_vars_madurez |>
+stats_vars_vigor2 <- stats_vars_vigor |>
   mutate(
     Valor = paste0(round(Media,2),"\U00B1",round(Desv,2)," ",Grupos)
   ) |>
-  select(-c(3:5)) |>
+  select(-c(4:6)) |>
   pivot_wider(
-    names_from = "Variable",
+    names_from = "Vigor",
     values_from = "Valor"
   )
 
 
-write_xlsx(x = list("Componente" = stats_vars_componente2, 
-                    "Madurez" = stats_vars_madurez2,
-                    "Mad_Comp" = stats_vars,
-                    "valsp_mad" = valoresp_aov_mad,
-                    "valsp_comp" = valoresp_aov_comp,
-                    "valsp_mad_comp" = valoresp_aov_mad_comp),
+write_xlsx(x = list("Dosis" = stats_vars_dosis2, 
+                    "Vigor" = stats_vars_vigor2,
+                    "Dosis_Vigor" = stats_vars,
+                    "valsp_Dosis" = valoresp_aov_dosis,
+                    "valsp_Vigor" = valoresp_aov_vigor,
+                    "valsp_Vigor_Dosis" = valoresp_aov_vigor_dosis),
            "resultados/estadisticas.xlsx")
 
 
