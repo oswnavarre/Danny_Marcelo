@@ -7,7 +7,7 @@ library(extrafont)
 loadfonts(device = "win")
 
 datos <- read_excel("datos.xlsx")
-dicc_vars <- read_excel("datos.xlsx", sheet = "vars") 
+dicc_vars <- read_excel("datos.xlsx", sheet = "vars")
 
 datos <- datos |> 
   drop_na() |>
@@ -33,8 +33,7 @@ datos_largos <- datos |>
     5:7,
     names_to = "Variable",
     values_to = "Valor"
-  ) 
-
+  )
 
 stats_vars <- datos_largos |>
   group_by(Medición, Vigor, Dosis,  Variable) |>
@@ -264,9 +263,167 @@ write_xlsx(x = list("Dosis" = stats_vars_dosis2,
                     "valsp_Vigor_Dosis" = valoresp_aov_vigor_dosis),
            "resultados/estadisticas.xlsx")
 
-
+rm(list = ls())
 
 # Diseño Completamente al AZAR solo dosis ---------------------------------
 
 
 
+
+
+
+
+#Quitar Vigor ------------------------------------------------------------
+datos <- read_excel("datos.xlsx")
+dicc_vars <- read_excel("datos.xlsx", sheet = "vars")
+
+
+datos_new <- datos 
+
+#Algo paso aqui. ---- Me da error ---- 
+datos_new <- datos_new |>
+  drop_na() |>
+  mutate(
+    Medición = as.numeric(factor(Fecha))
+  ) |>
+  select(Medición,
+         Dosis,
+         Textura,
+         SPAD,
+         ALTURA)
+
+datos_new$Dosis <- factor(datos_new$Dosis,
+                      levels =c(0,1,2,3))
+
+datos_largos <- datos_new |>
+  pivot_longer(
+    3:5,
+    names_to = "Variable",
+    values_to = "Valor"
+  )
+
+stats_vars_new <- datos_largos |>
+  group_by(Medición, Dosis,  Variable) |>
+  summarise(
+    Media = mean(Valor),
+    Desv = sd(Valor)
+  )
+
+
+variables <- unique(datos_largos$Variable)
+
+for(i in seq_along(variables)){
+  df <- stats_vars_new |>
+    filter(Variable == variables[i])
+  etiqueta <- paste0(dicc_vars[i,2])
+  g2 <- ggplot(df, aes(x = Medición, y = Media, col = Dosis)) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = unique(df$Medición)) +
+    labs(x = "Medición", y = etiqueta) + 
+    theme_apa() +
+    theme(
+      legend.position = "bottom",
+      text = element_text(family = "Arial"),
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 12, face = "bold"),
+      legend.text = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold"),
+      plot.subtitle = element_text(size = 12),
+      plot.caption = element_text(size = 10)
+    )
+  nombre <- paste0("evolucion2_",variables[i],".png")
+  ggsave(nombre,g2,width = 8, height = 4)
+}
+
+valoresp_aov_dosis <- data.frame(
+  Variable = NA,
+  valorp = NA,
+  Medición = NA
+)
+
+# QUITAR O NO QUITAR LA INTERACCION? 
+
+grupos_dosis <- data.frame(
+  Medición = NA,
+  Variable = NA,
+  Dosis = NA,
+  Grupos = NA
+)
+mediciones <- unique(datos_new$Medición)
+for(j in seq_along(mediciones)){
+  for(i in seq_along(variables)){
+    
+    datos_grafico_new <- datos_largos |>
+      filter(Variable == variables[i] & Medición == mediciones[j])
+    
+    aov_var <- aov(Valor ~ Dosis, 
+                   data = datos_grafico_new)
+    tbl_aov_var <- anova(aov_var)
+    valsp_aov_dosis <- data.frame(
+      Medición = mediciones[j],
+      Variable = variables[i],
+      valorp =  tbl_aov_var[1,5]
+    )
+    
+    
+    valoresp_aov_dosis <- bind_rows(valoresp_aov_dosis, valsp_aov_dosis)
+    
+    
+    tukey_dosis <- HSD.test(aov_var, "Dosis")
+    
+    
+    grps_dosis <- tukey_dosis$groups
+    grps_dosis <- grps_dosis |>
+      rownames_to_column(var = "Dosis") |>
+      select(-2) |>
+      mutate(
+        Medición = mediciones[j],
+        Variable = variables[i]) |>
+      rename(
+        Grupos = groups
+      )
+    
+    grupos_dosis <- rbind(grupos_dosis,grps_dosis)
+    
+    
+  }
+}
+
+
+
+
+
+
+# Estadísticas por solo Dosis -------------------------------
+
+
+stats_vars_new <- left_join(stats_vars_new,grupos_dosis)
+
+for(i in seq_along(variables)){
+  sf <- stats_vars_new |>
+    filter(Variable == variables[i])
+  df <- datos_largos |>
+    filter(Variable == variables[i])
+  
+  # Hacer el diagrama de cajas y poner las letras. 
+  # El diagrama debe tener en el eje de las x las mediciones
+  # En el eje y el Valor de la variable
+  # Fill por dosis para que se separen los diagrama de caja
+}
+
+
+stats2 <- stats_vars_new |>
+  mutate(
+    Valor = paste0(round(Media,2),"\U00B1",round(Desv,2)," ",Grupos)
+  ) |>
+  select(-c(4:6)) |>
+  pivot_wider(
+    names_from = "Dosis",
+    values_from = "Valor"
+  )
+
+write_xlsx(x = list("Dosis" = stats2,
+                    "valsp" = valores
+                    ),
+           "resultados/estadisticas2.xlsx")

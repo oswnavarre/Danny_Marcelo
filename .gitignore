@@ -1,5 +1,12 @@
+<<<<<<< HEAD
 # R / RStudio
 .Rhistory
 .RData
 .Ruserdata
 .Rproj.user/
+=======
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+>>>>>>> 02266b082544826bb52092ea5d61bfd1a7c75d59
