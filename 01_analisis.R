@@ -263,7 +263,7 @@ write_xlsx(x = list("Dosis" = stats_vars_dosis2,
                     "valsp_Vigor_Dosis" = valoresp_aov_vigor_dosis),
            "resultados/estadisticas.xlsx")
 
-
+rm(list = ls())
 
 # Diseño Completamente al AZAR solo dosis ---------------------------------
 
@@ -274,10 +274,11 @@ write_xlsx(x = list("Dosis" = stats_vars_dosis2,
 
 
 #Quitar Vigor ------------------------------------------------------------
+datos <- read_excel("datos.xlsx")
+dicc_vars <- read_excel("datos.xlsx", sheet = "vars")
 
-datos_new <- datos |>
-  mutate(
-    Vigor = NULL,)
+
+datos_new <- datos 
 
 #Algo paso aqui. ---- Me da error ---- 
 datos_new <- datos_new |>
@@ -291,12 +292,12 @@ datos_new <- datos_new |>
          SPAD,
          ALTURA)
 
-datos$Dosis <- factor(datos$Dosis,
+datos_new$Dosis <- factor(datos_new$Dosis,
                       levels =c(0,1,2,3))
 
 datos_largos <- datos_new |>
   pivot_longer(
-    4:6,
+    3:5,
     names_to = "Variable",
     values_to = "Valor"
   )
@@ -308,12 +309,6 @@ stats_vars_new <- datos_largos |>
     Desv = sd(Valor)
   )
 
-stats_vars_dosis <- datos_largos |>
-  group_by(Medición, Dosis,  Variable) |>
-  summarise(
-    Media = mean(Valor),
-    Desv = sd(Valor)
-  )
 
 variables <- unique(datos_largos$Variable)
 
@@ -325,7 +320,6 @@ for(i in seq_along(variables)){
     geom_point() +
     geom_line() +
     scale_x_continuous(breaks = unique(df$Medición)) +
-    facet_wrap(. ~ Tratamiento, nrow = 1) +
     labs(x = "Medición", y = etiqueta) + 
     theme_apa() +
     theme(
@@ -338,7 +332,7 @@ for(i in seq_along(variables)){
       plot.subtitle = element_text(size = 12),
       plot.caption = element_text(size = 10)
     )
-  nombre <- paste0("evolucion_",variables[i],".png")
+  nombre <- paste0("evolucion2_",variables[i],".png")
   ggsave(nombre,g2,width = 8, height = 4)
 }
 
@@ -349,12 +343,6 @@ valoresp_aov_dosis <- data.frame(
 )
 
 # QUITAR O NO QUITAR LA INTERACCION? 
-  
-valoresp_aov_vigor_dosis <- data.frame(
-  Variable = NA,
-  valorp = NA,
-  Medición = NA
-)
 
 grupos_dosis <- data.frame(
   Medición = NA,
@@ -362,33 +350,12 @@ grupos_dosis <- data.frame(
   Dosis = NA,
   Grupos = NA
 )
-mediciones <- unique(datos$Medición)
+mediciones <- unique(datos_new$Medición)
 for(j in seq_along(mediciones)){
   for(i in seq_along(variables)){
     
     datos_grafico_new <- datos_largos |>
       filter(Variable == variables[i] & Medición == mediciones[j])
-    variable_lab = dicc_vars[i,2]
-    etiqueta_grafico = paste(variable_lab)
-    
-    nombre_grafico = paste0("graficos/",mediciones[j],"_",variables[i],".png")
-    
-    gvar <- ggplot(datos_grafico_new, aes(x = Dosis, y = Valor, color = Tratamiento)) +
-      geom_boxplot() + 
-      theme_apa() +
-      ylab(etiqueta_grafico) +
-      theme(
-        legend.position = "bottom",
-        axis.text.y = element_text(color = "black", family = "Arial",size=12),
-        axis.text.x = element_text(color = "black", family = "Arial",size=12),
-        axis.title.y = element_text(color = "black", family = "Arial",size=12),
-        legend.text = element_text(color = "black", family = "Arial",size=12),
-        axis.line.x = element_line(color = "black"),
-        axis.line.y = element_line(color = "black"),
-        axis.line.x.top = element_line(color = "black"),
-        axis.line.y.right = element_line(color = "black")
-      ) 
-    ggsave(nombre_grafico,gvar, width = 4, height = 4 )
     
     aov_var <- aov(Valor ~ Dosis, 
                    data = datos_grafico_new)
@@ -396,16 +363,12 @@ for(j in seq_along(mediciones)){
     valsp_aov_dosis <- data.frame(
       Medición = mediciones[j],
       Variable = variables[i],
-      valorp =  tbl_aov_var[2,5]
-    )
-    valsp_aov_vigor_dosis <- data.frame(
-      Medición = mediciones[j],
-      Variable = variables[i],
-      valorp =  tbl_aov_var[3,5]
+      valorp =  tbl_aov_var[1,5]
     )
     
+    
     valoresp_aov_dosis <- bind_rows(valoresp_aov_dosis, valsp_aov_dosis)
-    valoresp_aov_vigor_dosis <- bind_rows(valoresp_aov_vigor_dosis, valsp_aov_vigor_dosis)
+    
     
     tukey_dosis <- HSD.test(aov_var, "Dosis")
     
@@ -423,29 +386,6 @@ for(j in seq_along(mediciones)){
     
     grupos_dosis <- rbind(grupos_dosis,grps_dosis)
     
-    var2 <- datos_grafico_new |>
-      group_by(Dosis) |>
-      summarise(grupos = mean(Valor))
-    nombre_grafico_interaccion <- paste0("graficos/interaccion_",mediciones[j],"_",variables[i],".bmp")
-    
-    grafico_int <- ggplot(var2, aes(x = Dosis, y = grupos, color = Tratamiento) ) + 
-      geom_line(aes(group = Tratamiento)) +
-      geom_point() +
-      ylab(etiqueta_grafico) +
-      xlab("Dosis") + theme_apa() +
-      theme(
-        legend.position = "bottom",
-        axis.text.y = element_text(color = "black", family = "Arial",size=12),
-        axis.text.x = element_text(color = "black", family = "Arial",size=12),
-        axis.title.y = element_text(color = "black", family = "Arial",size=12),
-        legend.text = element_text(color = "black", family = "Arial",size=12),
-        axis.line.x = element_line(color = "black"),
-        axis.line.y = element_line(color = "black"),
-        axis.line.x.top = element_line(color = "black"),
-        axis.line.y.right = element_line(color = "black")
-      )
-    
-    ggsave(nombre_grafico_interaccion,grafico_int,width = 4, height = 4)
     
   }
 }
@@ -458,9 +398,22 @@ for(j in seq_along(mediciones)){
 # Estadísticas por solo Dosis -------------------------------
 
 
-stats_vars_dosis <- left_join(stats_vars_dosis)
+stats_vars_new <- left_join(stats_vars_new,grupos_dosis)
 
-stats_vars_dosis2 <- stats_vars_dosis |>
+for(i in seq_along(variables)){
+  sf <- stats_vars_new |>
+    filter(Variable == variables[i])
+  df <- datos_largos |>
+    filter(Variable == variables[i])
+  
+  # Hacer el diagrama de cajas y poner las letras. 
+  # El diagrama debe tener en el eje de las x las mediciones
+  # En el eje y el Valor de la variable
+  # Fill por dosis para que se separen los diagrama de caja
+}
+
+
+stats2 <- stats_vars_new |>
   mutate(
     Valor = paste0(round(Media,2),"\U00B1",round(Desv,2)," ",Grupos)
   ) |>
@@ -470,9 +423,8 @@ stats_vars_dosis2 <- stats_vars_dosis |>
     values_from = "Valor"
   )
 
-write_xlsx(x = list("Dosis" = stats_vars_dosis2, 
-                    "Dosis_Vigor" = stats_vars,
-                    "valsp_Dosis" = valoresp_aov_dosis,
-                    "valsp_trat" = valoresp_aov_vigor,
-                    "valsp_Vigor_Dosis" = valoresp_aov_vigor_dosis),
+write_xlsx(x = list("Dosis" = stats2,
+                    "valsp" = valores
+                    ),
            "resultados/estadisticas2.xlsx")
+
