@@ -427,3 +427,4 @@ write_xlsx(x = list("Dosis" = stats2,
                     "valsp" = valores
                     ),
            "resultados/estadisticas2.xlsx")
+
