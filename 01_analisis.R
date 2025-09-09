@@ -405,11 +405,24 @@ for(i in seq_along(variables)){
     filter(Variable == variables[i])
   df <- datos_largos |>
     filter(Variable == variables[i])
-  
+  etiqueta <- paste0(dicc_vars[i,2])
   # Hacer el diagrama de cajas y poner las letras. 
   # El diagrama debe tener en el eje de las x las mediciones
   # En el eje y el Valor de la variable
   # Fill por dosis para que se separen los diagrama de caja
+  nombre_grafico <- paste0("graficos/box2",variables[i],".png")
+  gvar <- ggplot(df, aes(x = factor(Medición), y = Valor, fill = Dosis)) + 
+    geom_boxplot() +
+    theme_apa() +
+    labs(y = etiqueta, x = "Medición") +
+    theme(
+      legend.position = "bottom"
+    )
+  maximo <- max(df$Valor)*1.05
+  gvar <- gvar + geom_text(data = sf, aes(x = factor(Medición), y = maximo, 
+                                                label = Grupos), 
+                           position = position_dodge(width = .75))
+  ggsave(nombre_grafico,gvar,width = 6, height = 4)
 }
 
 
@@ -424,7 +437,7 @@ stats2 <- stats_vars_new |>
   )
 
 write_xlsx(x = list("Dosis" = stats2,
-                    "valsp" = valores
+                    "valsp" = valoresp_aov_dosis
                     ),
            "resultados/estadisticas2.xlsx")
 
