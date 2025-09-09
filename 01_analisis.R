@@ -276,7 +276,7 @@ datos_new <- datos |>
   mutate(
     Vigor = NULL,)
 
-#No se que paso aqui. ---- Me da error ---- 
+#Algo paso aqui. ---- Me da error ---- 
 datos_new <- datos_new |>
   drop_na() |>
   mutate(
@@ -472,4 +472,4 @@ write_xlsx(x = list("Dosis" = stats_vars_dosis2,
                     "valsp_Dosis" = valoresp_aov_dosis,
                     "valsp_trat" = valoresp_aov_vigor,
                     "valsp_Vigor_Dosis" = valoresp_aov_vigor_dosis),
-           "resultados/estadisticas.xlsx")
+           "resultados/estadisticas2.xlsx")
