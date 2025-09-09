@@ -265,6 +265,9 @@ write_xlsx(x = list("Dosis" = stats_vars_dosis2,
 
 
 
+# Diseño Completamente al AZAR solo dosis ---------------------------------
+
+
 
 
 
