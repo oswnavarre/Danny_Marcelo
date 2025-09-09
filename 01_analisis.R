@@ -452,7 +452,7 @@ for(j in seq_along(mediciones)){
 
 
 
-# Estadísticas por Dosis -------------------------------
+# Estadísticas por solo Dosis -------------------------------
 
 
 stats_vars_dosis <- left_join(stats_vars_dosis)
